@@ -54,79 +54,31 @@ def on_message(data):
 
 def flow():
     message = "Flow"
-    ack = rfm9x.send(message, 0, with_ack=True)  # Send to Node 0
+    ack = rfm9x.send(message, 5, with_ack=True)  # Send to Node 0
     print("Acknowledge? {}".format(ack))
-    rec = rfm9x.receive(with_ack=True)
     cont = 0
-    while rec is not None:
-        ack = rfm9x.send(message, 0, with_ack=True)  # Send to Node 0
+    while ack == 0:
+        ack = rfm9x.send(message, 5, with_ack=True)  # Send to Node 0
         print("Acknowledge? {}".format(ack))
-        rec = rfm9x.receive(with_ack=True)
-        if cont > 10:
-            return "Error de comunicación"
-        cont += 1
-
-    print(rec)
-    return rec
-
-
-def relays(command, identifier):
-    global serverInterrupt
-    message = command + identifier
-    ack = rfm9x.send(message, 0, with_ack=True)  # Send to Node 0
-    print("Acknowledge? {}".format(ack))
-    rec = rfm9x.receive(with_ack=True)
-    cont = 0
-    while rec is None:
-        ack = rfm9x.send(message, 0, with_ack=True)  # Send to Node 0
-        print("Acknowledge? {}".format(ack))
-        rec = rfm9x.receive(with_ack=True)
         if cont > 5:
             serverInterrupt = False
             return "Error de comunicación"
         cont += 1
     serverInterrupt = False
-    print(rec)
+    return "Comando {} se ha enviado correctamente. Info ".format(data)
     
-    return "Comando {} se ha enviado correctamente al relay #{}. Info ".format(command, identifier, rec)
-
-
-def humidity(identifier):
-    global serverInterrupt
-    dic = {1: "A", 2: "B", 3: "C", 4: "D", 5: "E", 6: "F", 7: "G", 8: "H", 9: "I", 10: "J", 11: "K", 12: "L", 13: "M",
-           14: "N", 15: "O"}
-    message = "Data!{0}".format(identifier)
-    now = datetime.now()
-    dt_string = now.strftime("%Y-%m-%d %H:%M:%S")
-    ack = rfm9x.send(message, identifier, with_ack=True)
-    print(ack)
-    try:
-        rec = rfm9x.receive(with_ack=True).split("/")
-        print(rec)
-        sendurl = {"id_box": dic[identifier], "created_at": dt_string, "sensorA": rec[0], "sensorB": rec[1],
-                   "sensorC": rec[2], "sensorD": rec[3], "sensorE": rec[4], "isCalibration": False}
-        url = "http://201.207.53.225:3031/api/biocarbon/HumidityReport"
-        x = requests.post(url, data=sendurl)
-        print(x.text)
-        serverInterrupt = False
-        return rec
-    except:
-        print("Error Lectura Caja {}".format(dic[identifier]))
-        serverInterrupt = False
-        return
-
 def mainLoop():
     global serverInterrupt,rfm9x
-    nodes = [9,10,13,14,15] #Cajas a realizar pruebas
+    #nodes = [9,10,13,14,15] #Cajas a realizar pruebas
     #nodes = [8,9] #Cajas a realizar pruebas
-    dic = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E", 6:"F", 7:"G", 8:"H", 9:"I", 10:"J", 11:"K", 12:"L", 13:"M", 14:"N", 15:"O"}
+    #dic = {1:"A", 2:"B", 3:"C", 4:"D", 5:"E", 6:"F", 7:"G", 8:"H", 9:"I", 10:"J", 11:"K", 12:"L", 13:"M", 14:"N", 15:"O"}
     
-    errors = {}
-    for i in range(len(nodes)):
-        errors[dic[nodes[i]]] = 0
+    #errors = {}
+    #for i in range(len(nodes)):
+     #   errors[dic[nodes[i]]] = 0
         
-    Good = 0
-    Bad = 0
+    #Good = 0
+    #Bad = 0
     
     #if(not os.path.exists("/home/pitec/Documents/Biocarbon/RaspGateway/pruebaRSSI.txt")):
         #file = open("/home/pitec/Documents/Biocarbon/RaspGateway/pruebaRSSI.txt", "w")
@@ -141,6 +93,8 @@ def mainLoop():
     url = "http://201.207.53.225:3031/api/biocarbon/HumidityReport"
     url2 = "http://201.207.53.225:3031/api/biocarbon/TemperatureReport"
     F = 0
+    Flow_good = 0
+    Error = 0
     while True:
         if not serverInterrupt:
             now=datetime.now()
@@ -149,56 +103,38 @@ def mainLoop():
             #fp2 = open("/home/pitec/Documents/Biocarbon/RaspGateway/DatosHumedad.txt", 'a')
             fp_ = open("/home/pitec/Documents/Biocarbon/RaspGateway/Mediciones.txt", 'w')
             fp_.write("Lecturas totales,Error de lectura,Lectura hecha")
-            for i in range(len(nodes)):
-                fp_.write(",Errores caja "+dic[nodes[i]])
-            fp_.write("\n")
-            for node in nodes:
-                message = "Data!{0}".format(node)
-                t1 = time.time()
-                ack = rfm9x.send(message, node, with_ack=True)
-                print("Acknowledge? {}".format(ack))
+            #Recepción de datos (Flujo ó Estación)
+            rec = rfm9x.receive(with_ack=True).split("/")
+            print(rec)
+        if rec is not None:
+            if rec[0] == "Flujo":
+                now=datetime.now()
+                dt_string=now.strftime("%Y-%m-%d %H:%M:%S")
+                sendurl = {"id_box":"Flujo", "created_at":dt_string, "Flujo":rec[1]}
+                Flow_good += 1
                 try:
-                    rec = rfm9x.receive(with_ack=True).split("/")
-                    print(rec)
-                    t2 = time.time()
-                    print("tiempo: {}".format(time.time()-t1))
-                    sendurl = {"id_box":dic[node], "created_at":dt_string, "sensorA":rec[0], "sensorB":rec[1], "sensorC":rec[2], "sensorD":rec[3], "sensorE":rec[4], "isCalibration":False}
-                    #fp.write(str(node) + "," + str(rfm9x.rfm9x.last_rssi) + "," + str(rfm9x.rfm9x.last_snr) +
-                    # "," + str(t2-t1) + ","
-                    #    + str(dt_string) + "\n")
-                    #fp2.write(str(now) + "," + str(node) + "," + str(rec[0]) + "," + str(rec[1]) + "," + str(rec[2]) + "," + str(rec[3]) + "," + str(rec[4])+ "\n")
-                    Good += 1
                     x=requests.post(url,data=sendurl)
+                    print("Se ha enviado el dato de Flujo: ".format(rec[1]))
                     print(x.text)
                     print(sendurl)
-                except Exception as e:
-                    print("Error Lectura Caja {}. Error: {}".format(dic[node], e))
-                    Bad += 1
-                    errors[dic[node]] = errors[dic[node]] + 1
-                time.sleep(2)
-            try:
-                ack = rfm9x.send("Temp", 0, with_ack=True)
-                print("Acknowledge? {}".format(ack))
-                rec = rfm9x.receive(with_ack=True)
-                print(rec)
-                if rec != None and ack == True:
-                    sendurl2 = {"temperature1":rec, "temperature2":2, "temperature3":3, "temperature4":4, "temperature5":5}
-                    x = requests.post(url2,data=sendurl2)
-                    print("TempSuccess")
-                else:
-                    print("ErrorTemp")
-                    #F = F + 1
-                    #if F == 5:
-                        #reboot()
-            except Exception:
-                print("Error Lectura Temp")
-            #fp.close()
-            #fp2.close()
-            fp_.write(str(Good+Bad)+","+str(Bad)+","+str(Good))
-            for i in range(len(nodes)):
-                fp_.write(","+str(errors[dic[nodes[i]]]))
-            fp_.write("\n")
-            fp_.close()
+                except:
+                    Error += 1
+                    print("Error {} al subir al servidor",Error)
+                                         
+            elif rec[0] == "Estacion":
+                print("Dato de la estacion recibido")
+                now=datetime.now()
+                dt_string=now.strftime("%Y-%m-%d %H:%M:%S")
+                sendurl = {"id_device": "1", "created_at": dt_string,"UV_Radiation":rec[4],"Flow":rec[6],"Luminosity":rec[5],"Pressure":rec[3],"Temperature":rec[1],"Humidity":rec[2]}
+                try:
+                    x=requests.post(url,data=sendurl)
+                    print("Se ha enviado el dato de Flujo: ".format(rec[1]))
+                    print(x.text)
+                    print(sendurl)
+                except:
+                        Error += 1
+                        print("Error {} al subir al servidor",Error)
+                        
         print("Ultima actualizacion: " + str(dt_string))
         time.sleep(40)
 
