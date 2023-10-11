@@ -19,3 +19,5 @@ Recibir la interrupción del servidor y notificar al módulo de flujo que realiz
 #### Atmosférico
 sendurl = {"id_device": "1", "Volumen":rec[4],"Precipitacion":rec[6],"Luminosidad":rec[5],"Presion":rec[3],"Vel_Viento":rec[1],"Dir_Viento":rec[2], "Temperatura":rec[2], "Humedad":rec[2]}
 #### Flujo
+GET
+http://201.207.53.225:3030/api/cosecha/Flow/:command/:id
