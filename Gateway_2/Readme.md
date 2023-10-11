@@ -9,7 +9,11 @@ Recibir la interrupción del servidor y notificar al módulo de flujo que realiz
 
 
 ## API
-### IP
+
+### URL
+##Post
+- http://201.207.53.225:3030/api/cosecha/AtmosphericReport/
+- http://201.207.53.225:3030/api/cosecha/QualityReport/
 
 ### Formato
 
