@@ -8,7 +8,7 @@ from datetime import datetime
 import threading
 import os
 import subprocess
-#rfm9x = RFM9X()
+rfm9x = RFM9X()
 
 sio = socketio.Client()
 
@@ -19,7 +19,7 @@ serverInterrupt = False #Variable that stops mainloop if gateway receives a mess
 
 def reboot():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    subprocess.Popen(["python3","main.py.","&"])
+    subprocess.Popen(["python3","main2.py.","&"])
     os._exit(0)
 
 def connect():
@@ -58,20 +58,20 @@ def flow():
     print("Acknowledge? {}".format(ack))
     cont = 0
     while ack == 0:
-        ack = rfm9x.send(message, 24, with_ack=True)  # Send to Node 0
+        ack = rfm9x.send("Data!24", 24, with_ack=True)  # Send to Node 0
         print("Acknowledge? {}".format(ack))
         if cont > 5:
             serverInterrupt = False
             return "Error de comunicación"
         cont += 1
     serverInterrupt = False
-    return "Comando {} se ha enviado correctamente. Info ".format(data)
+    return "Comando {} se ha enviado correctamente. Info ".format("Data!24")
     
 def mainLoop():
     global serverInterrupt,rfm9x
-    
-    url = "http://201.207.53.225:3031/api/biocarbon/HumidityReport"
-    url2 = "http://201.207.53.225:3031/api/biocarbkon/TemperatureReport"
+     
+    url_flujo = "http://201.207.53.225:3030/api/cosecha/Flow/"
+    url_atmosferico = "http://201.207.53.225:3030/api/cosecha/AtmosphericReport/"
     F = 0
     Flow_good = 0
     Error = 0
@@ -98,36 +98,33 @@ def mainLoop():
             rec = rec.split('/')
             
             if rec[0] == "Flujo":
-                now=datetime.now()
                 print(rec[1])
-                dt_string=now.strftime("%Y-%m-%d %H:%M:%S")
-                sendurl = {"id_box":"Flujo", "created_at":dt_string, "Flujo":rec[1]}
-                print(sendurl)
+                #sendurl = {"id_box":"Flujo", "created_at":dt_string, "Flujo":rec[1]}
+                sendurl={"id_device":"1", "Flujo":rec[1]}
+                x = requests.post(url_flujo,data=sendurl)
+                print(x.text)
                 Flow_good += 1
                 
             elif rec[0] == "Estacion":
-                print("Dato de la estacion recibido")
-                now=datetime.now()
-                dt_string=now.strftime("%Y-%m-%d %H:%M:%S")
-                sendurl = {"id_device": "1", "created_at": dt_string,"UV_Radiation":rec[4],"Flow":rec[6],"Luminosity":rec[5],"Pressure":rec[3],"Temperature":rec[1],"Humidity":rec[2]}
-                
-                        
-        print("Ultima actualizacion: " + str(dt_string))
+                print("Dato de la estacion recibido")  
+                sendurl = {"id_device": "1", "Volumen":"0","Precipitacion":rec[8],
+                           "Luminosidad":rec[5],"Presion":rec[3],"Vel_Viento":rec[7],
+                           "Dir_Viento":rec[6],"Temperatura":rec[1], "Humedad":rec[2]}
+                x = requests.post(url_atmosferico,data=sendurl)
         
-
 try:
     rfm9x = RFM9X()
     
 except Exception:
-    reboot()
+    reboot() 
 
 # Wait until connection is established with server 
 while True:
     try:
         x = threading.Thread(target=mainLoop)
         x.start()
-        #sio.connect('http://201.207.53.225:3031/', transports=['websocket'])
-        #sio.wait()
+        sio.connect('http://201.207.53.225:3030/', transports=['websocket'])
+        sio.wait()
         break
     except:
         print("Connection failed. Retrying...")
