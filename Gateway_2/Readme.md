@@ -21,10 +21,17 @@ sendurl = {"id_device": "1", "Volumen":rec[4],"Precipitacion":rec[6],"Luminosida
 #### Flujo
 - GET
 http://201.207.53.225:3030/api/cosecha/Flow/:command/:id
+
+http://201.207.53.225:3030/api/cosecha/LastFlow/:id
+
 - Post
-http://201.207.53.225:3030/api/cosecha/Flow/
+http://201.207.53.225:3030/api/cosecha/FlowReport/
 
 sendurl={{id_sensor}, ${id_device}, ${flow}}
 
 id_sensor -> Numero del sensor del dispositivo de flujo 
+
+- Put
+http://201.207.53.225:3030/api/cosecha/FlowReports
+sendurl={{fromdate},{todate},{iddevice}}
 
